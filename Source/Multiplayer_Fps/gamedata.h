@@ -28,6 +28,8 @@ struct FCharAttributes : public FTableRowBase
 	int64 Jumps;
 	UPROPERTY(EditAnywhere)
 	float Defense;
+	UPROPERTY(EditAnywhere)
+	float Gravity;
 	
 	
 };

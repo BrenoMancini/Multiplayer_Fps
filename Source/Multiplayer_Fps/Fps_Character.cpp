@@ -14,18 +14,24 @@ AFps_Character::AFps_Character()
 	PrimaryActorTick.bCanEverTick = true;
 
 }
+
+
+
 void AFps_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	
 }
 
 void AFps_Character::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// Replicar a propriedade CameraRotation
+	
 	DOREPLIFETIME(AFps_Character,CharacterData);
+	DOREPLIFETIME(AFps_Character,fDamagePercentage);
+	
 }
 
 void AFps_Character::Jump()
@@ -65,6 +71,7 @@ void AFps_Character::BeginPlay()
 			GetCharacterMovement()->Mass = CharacterData.Attributes.Mass;
 			GetCharacterMovement()->JumpZVelocity = CharacterData.Attributes.JumpVelocity;
 			GetCharacterMovement()->AirControl = CharacterData.Attributes.AirControl;
+			GetCharacterMovement()->GravityScale = CharacterData.Attributes.Gravity;
 		}
 	}
 	else
@@ -79,6 +86,33 @@ void AFps_Character::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+//Simple Funciotn of checking if Actor is near ground, then applying Launch damage.
+void AFps_Character::ApplySpikeDamage(const FVector& DamagePoint, float SpikeDamageAmount)
+{
+	FVector LaunchForce;
+	fDamagePercentage = fDamagePercentage + SpikeDamageAmount - this->CharacterData.Attributes.Defense;
+	FVector DamageDirection = this->GetActorLocation() - DamagePoint;
+	DamageDirection.Normalize();
+	LaunchForce = DamageDirection * ((this->fDamagePercentage) - CharacterData.Attributes.Mass/10)*100;
 
-// Called to bind functionality to input
+	FHitResult HitResult;
+	FVector vStart = this->GetActorLocation();
+	FVector vEnd = vStart - FVector(0, 0, 300); // is close to the ground? 
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(this);
+
+	if (this->GetWorld()->LineTraceSingleByChannel(HitResult, vStart, vEnd, ECC_Visibility, CollisionParams))
+	{
+		
+		FVector LaunchDirection = (FVector(0, 0, 1)).RotateAngleAxis(45, FVector::RightVector);
+		LaunchForce += LaunchDirection * ((this->fDamagePercentage) - CharacterData.Attributes.Mass/10)*10; // 10 added as adjustment value, I might chnage it later on
+	}
+	else
+	{
+		LaunchForce += FVector(0, 0, (1)) * -1000; 
+	}
+
+	this->LaunchCharacter(LaunchForce, false, true);
+}
+
 
